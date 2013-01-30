@@ -11,7 +11,7 @@ uint32_t RF12_Stream::retries = 0;
 uint32_t RF12_Stream::rxPackets = 0;
 uint32_t RF12_Stream::txPackets = 0;
 
-volatile bool RF12_Stream::found = false;
+volatile bool RF12_Stream::isPresent = false;
 
 RF12_Stream::RF12_Stream(void *rxBuffer, int rxBufferLen,
 		void *txBuffer, int txBufferLen)
@@ -47,12 +47,12 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
   
   AsyncDelay detectTimeout;
   detectTimeout.start(100, AsyncDelay::MILLIS);
-  while (!detectTimeout.isExpired() && !found)
+  while (!detectTimeout.isExpired() && !isPresent)
     ; // Loop
 
   // Restore settings
   rf12_initialize(id, band, group);
-  return found;
+  return isPresent;
 }
 
 
@@ -170,5 +170,5 @@ size_t RF12_Stream::write(uint8_t c)
 void RF12_Stream::detectHandler(void)
 {
   if (rf12_control(0x0000) & 0x4000)
-    found = true;
+    isPresent = true;
 }

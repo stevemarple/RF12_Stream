@@ -11,7 +11,7 @@
 class RF12_Stream : public Stream
 {
 public:
-  static volatile bool found; // Value valid only after begin()
+  static volatile bool isPresent; // Value valid only after begin()
   static uint8_t packetDataLength;
   static unsigned long retryDelay_ms;
   static unsigned long txDelay_ms;
