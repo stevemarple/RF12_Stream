@@ -1,3 +1,11 @@
+/*
+ * Arduino library to provide a software emulation of a transparent
+ * serial link using the RFM12B radio module.
+ *
+ * Copyright S R Marple, 2013.
+ * Released under MIT License, http://opensource.org/licenses/mit-license.php
+ */
+
 #include "Arduino.h"
 
 #include <RF12.h>

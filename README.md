@@ -23,3 +23,8 @@ RFM12B is fitted, and to fall back to using a XRF/XBee radio if it is
 not. By using a reference to a Stream object this concept can be used
 to easily create a single firmware image which supports both types of
 hardware.
+
+# License
+
+The RF12_Stream library is copyright S R Marple, 2013 and is released
+under the MIT License. See LICENSE for full details.

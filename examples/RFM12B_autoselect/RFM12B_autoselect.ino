@@ -1,8 +1,12 @@
 /*
- * Example sketch to demonstrate the concept of how a single firmware
- * image can support the RFM12B and Ciseco XRF (or XBee) modules,
- * autoselecting between them depending on the hardware fitted.
+ * Example sketch of how the begin() function can be used to check
+ * whether the RFM12B is fitted, and to fall back to using a XRF/XBee
+ * radio if it is not. By using a reference to a Stream object this
+ * concept can be used to easily create a single firmware image which
+ * supports both types of hardware.
  *
+ * Copyright S R Marple, 2013.
+ * Released under MIT License, http://opensource.org/licenses/mit-license.php
  */
 
 
