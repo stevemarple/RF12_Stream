@@ -6,6 +6,7 @@
  * Released under MIT License, http://opensource.org/licenses/mit-license.php
  */
 
+#include <util/atomic.h>
 #include "Arduino.h"
 
 #include <RF12.h>
@@ -67,37 +68,39 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
 void RF12_Stream::poll(void)
 {
   // Check for received packet
-  if (rf12_recvDone() && rf12_crc == 0) {
-    if ((rf12_hdr & RF12_HDR_CTL) && rf12_len == sizeof(txNum)) {
-      // ACK received
-      uint16_t recdAckNum = (rf12_data[0] << 8) | rf12_data[1];
-      if (recdAckNum == txNum) {
-	txBuf.skip(txBytesPending);
-	txBytesPending = 0;
-	txRetries = 0;
-	++txNum;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    if (rf12_recvDone() && rf12_crc == 0) {
+      if ((rf12_hdr & RF12_HDR_CTL) && rf12_len == sizeof(txNum)) {
+	// ACK received
+	uint16_t recdAckNum = (rf12_data[0] << 8) | rf12_data[1];
+	if (recdAckNum == txNum) {
+	  txBuf.skip(txBytesPending);
+	  txBytesPending = 0;
+	  txRetries = 0;
+	  ++txNum;
+	}
       }
-    }
-    else if ((rf12_hdr & RF12_HDR_CTL) == 0 && rf12_len > sizeof(txNum) &&
-	     rf12_len <= (packetDataLength + sizeof(txNum))) {
-      // Data
-      ackNum = (rf12_data[0] << 8) | rf12_data[1];
-      sendAck = true;
-      if (rxNum != ackNum) {
-	rxNum = ackNum;
-	rxBuf.write((const uint8_t*) rf12_data + 2, rf12_len - 2);
-	++rxPackets;
-      }
+      else if ((rf12_hdr & RF12_HDR_CTL) == 0 && rf12_len > sizeof(txNum) &&
+	       rf12_len <= (packetDataLength + sizeof(txNum))) {
+	// Data
+	ackNum = (rf12_data[0] << 8) | rf12_data[1];
+	sendAck = true;
+	if (rxNum != ackNum) {
+	  rxNum = ackNum;
+	  rxBuf.write((const uint8_t*) rf12_data + 2, rf12_len - 2);
+	  ++rxPackets;
+	}
       
+      }
+
+      // if (RF12_WANTS_ACK)
+      // rf12_sendStart(RF12_ACK_REPLY, NULL, 0);
+
+      // Must wait for tx delay to expire before can transmit
+      txDelay.start(txDelay_ms, AsyncDelay::MILLIS);
     }
-
-    // if (RF12_WANTS_ACK)
-    // rf12_sendStart(RF12_ACK_REPLY, NULL, 0);
-
-    // Must wait for tx delay to expire before can transmit
-    txDelay.start(txDelay_ms, AsyncDelay::MILLIS);
   }
-
+  
   if (sendAck && txDelay.isExpired() && rf12_canSend()) {
     uint8_t ackData[sizeof(ackNum)];
     ackData[1] = ackNum & 0xFF;
