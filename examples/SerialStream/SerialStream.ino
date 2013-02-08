@@ -102,7 +102,7 @@ void setup(void)
 #ifdef USE_SW_SERIAL
   swSerial.begin(9600);
 #else
-  Serial.begin(9600);
+  Serial.begin(38400);
 #endif
 
   if (rfm12b.begin(RFM12B_CS, RFM12B_IRQ_PIN, RFM12B_IRQ_NUM,
