@@ -23,6 +23,7 @@ public:
   static uint8_t packetDataLength;
   static unsigned long retryDelay_ms;
   static unsigned long txDelay_ms;
+  static unsigned long flushTimeout_ms;
   static uint8_t maxRetriesPerPacket;
 
   // Transmission statistics
