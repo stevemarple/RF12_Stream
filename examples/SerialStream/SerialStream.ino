@@ -126,7 +126,7 @@ void loop(void)
   rfm12b.poll();
 
   // TODO: wait for a while for RFM12B to catch up?
-  while (mySerial.available() && rfm12b.getRxBuffer().getSizeRemaining()) {
+  while (mySerial.available() && rfm12b.getTxBuffer().getSizeRemaining()) {
     rfm12b.write(char(mySerial.read()));
     activity = true;
   }
