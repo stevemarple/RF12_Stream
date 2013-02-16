@@ -30,7 +30,7 @@ RF12_Stream::RF12_Stream(void *rxBuffer, int rxBufferLen,
     ackNum(0),
     sendAck(false),
     txBytesPending(0),
-    txRetries(0),
+    packetTries(0),
     //rxBuf(rxBuffer, rxBufferLen, true, false),
     //txBuf(txBuffer, txBufferLen, true, false) 
     rxBuf(rxBuffer, rxBufferLen),
@@ -81,7 +81,7 @@ void RF12_Stream::poll(void)
 	if (recdAckNum == txNum) {
 	  txBuf.skip(txBytesPending);
 	  txBytesPending = 0;
-	  txRetries = 0;
+	  packetTries = 0;
 	  ++txNum;
 	}
       }
@@ -107,11 +107,11 @@ void RF12_Stream::poll(void)
 
     }
 
-    if (txRetries >= maxRetriesPerPacket) {
+    if (packetTries > maxRetriesPerPacket && retryDelay.isExpired()) {
       // Enough tries on this portion of data
       txBuf.skip(txBytesPending);
       txBytesPending = 0;
-      txRetries = 0;
+      packetTries = 0;
       ++txNum;
     }
       
@@ -120,12 +120,12 @@ void RF12_Stream::poll(void)
     if ((txBytesPending == 0 || retryDelay.isExpired()) &&
 	txDelay.isExpired() &&
 	txBuf.getSize() && rf12_canSend()) {
-      if (txRetries > 1)
+      if (packetTries > 1)
 	++retries;
       else
 	++txPackets;
     
-      ++txRetries;
+      ++packetTries;
       uint8_t message[sizeof(txNum) + packetDataLength];
       // First two bytes are the TX packet number, sent in network order
       message[1] = txNum & 0xFF;
@@ -133,7 +133,6 @@ void RF12_Stream::poll(void)
       txBytesPending = txBuf.peek(message+sizeof(txNum), packetDataLength);
       uint8_t hdr = RF12_HDR_ACK; // RF12_HDR_DST | 0x02;
       rf12_sendStart(hdr, message, sizeof(txNum) + txBytesPending);
-      txDelay.start(txDelay_ms, AsyncDelay::MILLIS);
       retryDelay.start(retryDelay_ms, AsyncDelay::MILLIS);
     }
   //}
@@ -171,11 +170,32 @@ void RF12_Stream::flush()
   AsyncDelay flushTimeout(flushTimeout_ms, AsyncDelay::MILLIS);
   while (txBytesPending && txBuf.getSize() && !flushTimeout.isExpired())
     poll();
+  txBuf.clear();
 }
 
 size_t RF12_Stream::write(uint8_t c)
 {
-  return txBuf.write(&c, sizeof(c));
+  size_t bytesWritten;
+  int initialSize = txBuf.getSize();
+  bytesWritten = txBuf.write(&c, sizeof(c));
+  if (initialSize == 0 && bytesWritten)
+    // Start the TX timer when the first character to be sent is received.
+    txDelay.start(txDelay_ms, AsyncDelay::MILLIS);
+  return bytesWritten;
+}
+
+bool RF12_Stream::powerOn(void)
+{
+  rf12_sleep(RF12_WAKEUP);
+  return true;
+}
+
+bool RF12_Stream::powerOff(void)
+{
+  if (txBuf.getSize() && !txDelay.isExpired())
+    return false; // Wait for TX buffer to be sent
+  rf12_sleep(RF12_SLEEP);
+  return true;
 }
 
 void RF12_Stream::detectHandler(void)

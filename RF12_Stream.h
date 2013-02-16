@@ -54,6 +54,9 @@ public:
   inline const CircBuffer& getTxBuffer(void) const {
     return txBuf;
   }
+
+  bool powerOn(void);
+  bool powerOff(void);
   
   private:
   // Packet numbers, to avoid duplicates
@@ -62,7 +65,7 @@ public:
   uint16_t ackNum;
   bool sendAck;
   uint8_t txBytesPending; // number of bytes sent with no ACK
-  uint8_t txRetries;
+  uint8_t packetTries;
   //MultiReadCircBuffer rxBuf;
   //MultiReadCircBuffer txBuf;
   CircBuffer rxBuf;
