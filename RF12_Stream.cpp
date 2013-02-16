@@ -187,6 +187,8 @@ size_t RF12_Stream::write(uint8_t c)
 bool RF12_Stream::powerOn(void)
 {
   rf12_sleep(RF12_WAKEUP);
+  txBuf.clear();
+  rxBuf.clear();
   return true;
 }
 
@@ -195,6 +197,8 @@ bool RF12_Stream::powerOff(void)
   if (txBuf.getSize() && !txDelay.isExpired())
     return false; // Wait for TX buffer to be sent
   rf12_sleep(RF12_SLEEP);
+  txBuf.clear();
+  rxBuf.clear();
   return true;
 }
 
