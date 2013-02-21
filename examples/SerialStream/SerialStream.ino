@@ -2,10 +2,17 @@
  * Sketch to transfer data between the serial port and an RFM12B. This
  * sketch can be used to emulate an XBee or Ciseco XRF radio link.
  * You will need to use a pair RFM12B modules with similar software at
- * both ends of the link. The firmware size is under 8kB when compiled
- * for the ATtiny84 so it may be possible to run the sketch on the
- * RFM12B to Pi expansion board,
- * http://shop.openenergymonitor.com/raspberry-pi/.
+ * both ends of the link.
+ *
+ * Supported hardware:
+ *   # Calunium v2.0, v2.1 with ATmega1284P or similar microcontroller.
+ *
+ *   # RFM12B shield for Raspberry Pi with an ATmega328 or ATmega328P
+ *     microcontroller.
+ *
+ * The firmware size is under 8kB when compiled for the ATtiny84 so it
+ * may be possible to run the sketch on the RFM12B to Pi expansion
+ * board, http://shop.openenergymonitor.com/raspberry-pi/.
  *
  * Copyright S R Marple, 2013.
  * Released under MIT License, http://opensource.org/licenses/mit-license.php
@@ -35,7 +42,7 @@ Stream &mySerial = Serial;
 #define LED_PIN LED_BUILTIN
 
 #elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega328__) || defined (__AVR_ATmega328P__)
-// Jeenode mapping?
+// Mapping used by Jeenode and RFM12B shield for Raspberry Pi.
 #define RFM12B_CS 10
 #define RFM12B_IRQ_PIN 2
 #define RFM12B_IRQ_NUM 0
@@ -74,8 +81,8 @@ RF12_Stream rfm12b(rxBuffer, sizeof(rxBuffer),
 		   txBuffer, sizeof(txBuffer));
 
 
+const char *firmwareVersion = "SerialStream-1.0";
 unsigned long sendInterval_ms = 2000UL;
-
 AsyncDelay activityDelay;
 
 void setup(void)
@@ -105,6 +112,9 @@ void setup(void)
   Serial.begin(38400);
 #endif
 
+  mySerial.print("Firmware version ");
+  mySerial.print(firmwareVersion);
+  
   if (rfm12b.begin(RFM12B_CS, RFM12B_IRQ_PIN, RFM12B_IRQ_NUM,
 		   1, RF12_433MHZ)) {
   }
