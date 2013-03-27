@@ -6,7 +6,6 @@
  * Released under MIT License, http://opensource.org/licenses/mit-license.php
  */
 
-//#include <util/atomic.h>
 #include "Arduino.h"
 
 #include <RF12.h>
@@ -31,8 +30,6 @@ RF12_Stream::RF12_Stream(void *rxBuffer, int rxBufferLen,
     sendAck(false),
     txBytesPending(0),
     packetTries(0),
-    //rxBuf(rxBuffer, rxBufferLen, true, false),
-    //txBuf(txBuffer, txBufferLen, true, false) 
     rxBuf(rxBuffer, rxBufferLen),
     txBuf(txBuffer, txBufferLen) 
 {
@@ -47,10 +44,8 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
   pinMode(irqPin, INPUT);
   rf12_set_cs(cs);
   rf12_set_irq(irqPin, irqNum);
-  //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    rf12_initialize(id, band, group);
-  //}
-    
+  rf12_initialize(id, band, group);
+      
   // Check RFM12B is present. Use our own interrupt handler to respond
   // to a software reset.
   attachInterrupt(irqNum, RF12_Stream::detectHandler, LOW);
@@ -63,9 +58,8 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
     ; // Loop
 
   // Restore settings
-  //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    rf12_initialize(id, band, group);
-  // }
+  rf12_initialize(id, band, group);
+
   return isPresent;
 }
 
@@ -73,69 +67,65 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
 void RF12_Stream::poll(void)
 {
   // Check for received packet
-  //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    if (rf12_recvDone() && rf12_crc == 0) {
-      if ((rf12_hdr & RF12_HDR_CTL) && rf12_len == sizeof(txNum)) {
-	// ACK received
-	uint16_t recdAckNum = (rf12_data[0] << 8) | rf12_data[1];
-	if (recdAckNum == txNum) {
-	  txBuf.skip(txBytesPending);
-	  txBytesPending = 0;
-	  packetTries = 0;
-	  ++txNum;
-	}
+  if (rf12_recvDone() && rf12_crc == 0) {
+    if ((rf12_hdr & RF12_HDR_CTL) && rf12_len == sizeof(txNum)) {
+      // ACK received
+      uint16_t recdAckNum = (rf12_data[0] << 8) | rf12_data[1];
+      if (recdAckNum == txNum) {
+	txBuf.skip(txBytesPending);
+	txBytesPending = 0;
+	packetTries = 0;
+	++txNum;
       }
-      else if ((rf12_hdr & RF12_HDR_CTL) == 0 && rf12_len > sizeof(txNum) &&
-	       rf12_len <= (packetDataLength + sizeof(txNum))) {
-	// Data
-	ackNum = (rf12_data[0] << 8) | rf12_data[1];
-	// sendAck = true;
-	if (rxNum != ackNum) {
-	  rxNum = ackNum;
-	  rxBuf.write((const uint8_t*) rf12_data + 2, rf12_len - 2);
-	  ++rxPackets;
-	}
+    }
+    else if ((rf12_hdr & RF12_HDR_CTL) == 0 && rf12_len > sizeof(txNum) &&
+	     rf12_len <= (packetDataLength + sizeof(txNum))) {
+      // Data
+      ackNum = (rf12_data[0] << 8) | rf12_data[1];
+      if (rxNum != ackNum) {
+	rxNum = ackNum;
+	rxBuf.write((const uint8_t*) rf12_data + 2, rf12_len - 2);
+	++rxPackets;
+      }
 	
-	// if (sendAck) {
-	if (RF12_WANTS_ACK) {
-	  uint8_t ackData[sizeof(ackNum)];
-	  ackData[1] = ackNum & 0xFF;
-	  ackData[0] = (ackNum >> 8) & 0xFF;
-	  rf12_sendStart(RF12_ACK_REPLY, ackData, sizeof(ackData));
-	}
+      if (RF12_WANTS_ACK) {
+	uint8_t ackData[sizeof(ackNum)];
+	ackData[1] = ackNum & 0xFF;
+	ackData[0] = (ackNum >> 8) & 0xFF;
+	rf12_sendStart(RF12_ACK_REPLY, ackData, sizeof(ackData));
       }
-
     }
 
-    if (packetTries > maxRetriesPerPacket && retryDelay.isExpired()) {
-      // Enough tries on this portion of data
-      txBuf.skip(txBytesPending);
-      txBytesPending = 0;
-      packetTries = 0;
-      ++txNum;
-    }
+  }
+
+  if (packetTries > maxRetriesPerPacket && retryDelay.isExpired()) {
+    // Enough tries on this portion of data
+    txBuf.skip(txBytesPending);
+    txBytesPending = 0;
+    packetTries = 0;
+    ++txNum;
+  }
       
-    // Check if data to send.
-    // txBytesPending == 0 means no unacknowledged data
-    if ((txBytesPending == 0 || retryDelay.isExpired()) &&
-	txDelay.isExpired() &&
-	txBuf.getSize() && rf12_canSend()) {
-      if (packetTries > 1)
-	++retries;
-      else
-	++txPackets;
+  // Check if data to send.
+  // txBytesPending == 0 means no unacknowledged data
+  if ((txBytesPending == 0 || retryDelay.isExpired()) &&
+      txDelay.isExpired() &&
+      txBuf.getSize() && rf12_canSend()) {
+    if (packetTries > 1)
+      ++retries;
+    else
+      ++txPackets;
     
-      ++packetTries;
-      uint8_t message[sizeof(txNum) + packetDataLength];
-      // First two bytes are the TX packet number, sent in network order
-      message[1] = txNum & 0xFF;
-      message[0] = (txNum >> 8) & 0xFF;
-      txBytesPending = txBuf.peek(message+sizeof(txNum), packetDataLength);
-      uint8_t hdr = RF12_HDR_ACK; // RF12_HDR_DST | 0x02;
-      rf12_sendStart(hdr, message, sizeof(txNum) + txBytesPending);
-      retryDelay.start(retryDelay_ms, AsyncDelay::MILLIS);
-    }
-  //}
+    ++packetTries;
+    uint8_t message[sizeof(txNum) + packetDataLength];
+    // First two bytes are the TX packet number, sent in network order
+    message[1] = txNum & 0xFF;
+    message[0] = (txNum >> 8) & 0xFF;
+    txBytesPending = txBuf.peek(message+sizeof(txNum), packetDataLength);
+    uint8_t hdr = RF12_HDR_ACK; // RF12_HDR_DST | 0x02;
+    rf12_sendStart(hdr, message, sizeof(txNum) + txBytesPending);
+    retryDelay.start(retryDelay_ms, AsyncDelay::MILLIS);
+  }
 }
 
 

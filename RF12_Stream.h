@@ -9,9 +9,7 @@
 #ifndef RF12_STREAM_H
 #define RF12_STREAM_H
 
-//#include <stdint.h>
 #include <inttypes.h>
-//#include <MultiReadCircBuffer.h>
 #include <CircBuffer.h> 
 #include <AsyncDelay.h>
 #include "Stream.h"
@@ -46,11 +44,10 @@ public:
   virtual size_t write(uint8_t);
   using Print::write; // pull in write(str) and write(buf, size) from Print
 
-  //inline const MultiReadCircBuffer& getRxBuffer(void) const {
   inline const CircBuffer& getRxBuffer(void) const {
     return rxBuf;
   }
-  //inline const MultiReadCircBuffer& getTxBuffer(void) const {
+
   inline const CircBuffer& getTxBuffer(void) const {
     return txBuf;
   }
@@ -66,8 +63,6 @@ public:
   bool sendAck;
   uint8_t txBytesPending; // number of bytes sent with no ACK
   uint8_t packetTries;
-  //MultiReadCircBuffer rxBuf;
-  //MultiReadCircBuffer txBuf;
   CircBuffer rxBuf;
   CircBuffer txBuf;
   AsyncDelay retryDelay;
