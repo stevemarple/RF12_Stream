@@ -19,9 +19,9 @@ class RF12_Stream : public Stream
 public:
   static volatile bool isPresent; // Value valid only after begin()
   static uint8_t packetDataLength;
-  static unsigned long retryDelay_ms;
-  static unsigned long txDelay_ms;
-  static unsigned long flushTimeout_ms;
+  static uint16_t retryDelay_ms;
+  static uint16_t txDelay_ms;
+  static uint16_t flushTimeout_ms;
   static uint8_t maxRetriesPerPacket;
 
   // Transmission statistics
@@ -33,8 +33,16 @@ public:
 		void *txBuffer, int txBufferLen);
   // void begin(void);
   bool begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
-	     uint8_t id, uint8_t band, uint8_t group=0xD4);
-  
+	     uint8_t id, uint8_t band, uint16_t channel,
+	     uint8_t group=0xD4);
+
+  // Deprecated, for compatibility with initial version. channel=1600.
+  // inline bool begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
+  // 		    uint8_t id, uint8_t band, uint8_t group=0xD4) {
+  //   return begin(cs, irqPin, irqNum,
+  // 		 id, band, 1600, group);
+  // }
+
   void poll(void);
 
   virtual int available(void);

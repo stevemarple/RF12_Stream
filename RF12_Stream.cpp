@@ -12,9 +12,9 @@
 #include "RF12_Stream.h"
 
 uint8_t RF12_Stream::packetDataLength = 30;
-unsigned long RF12_Stream::retryDelay_ms = 50;
-unsigned long RF12_Stream::txDelay_ms = 100;
-unsigned long RF12_Stream::flushTimeout_ms = 1000;
+uint16_t RF12_Stream::retryDelay_ms = 50;
+uint16_t RF12_Stream::txDelay_ms = 100;
+uint16_t RF12_Stream::flushTimeout_ms = 1000;
 uint8_t RF12_Stream::maxRetriesPerPacket = 3;
 uint32_t RF12_Stream::retries = 0;
 uint32_t RF12_Stream::rxPackets = 0;
@@ -38,7 +38,8 @@ RF12_Stream::RF12_Stream(void *rxBuffer, int rxBufferLen,
 
 
 bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
-			uint8_t id, uint8_t band, uint8_t group)
+			uint8_t id, uint8_t band, uint16_t channel,
+			uint8_t group)
 {
   pinMode(cs, OUTPUT);
   pinMode(irqPin, INPUT);
@@ -60,6 +61,8 @@ bool RF12_Stream::begin(uint8_t cs, uint8_t irqPin, uint8_t irqNum,
   // Restore settings
   rf12_initialize(id, band, group);
 
+  // Set the channel
+  rf12_control(0xA000 | (channel & 0x0FFF));
   return isPresent;
 }
 
